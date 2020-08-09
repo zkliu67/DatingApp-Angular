@@ -12,7 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using DatingApp.API.Data;
-
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace DatingApp.API
 {
@@ -33,6 +35,20 @@ namespace DatingApp.API
             services.AddControllers(); // add support to controllers.
             // services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
             services.AddCors();
+            // services.AddSingleton(); // create single instance for repository
+            // services.AddTransient(); // create instance everytime is created
+            services.AddScoped<IAuthRepository, AuthRepository>(); // instance is created for one http request
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+              .AddJwtBearer(options => {
+                options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                {
+                  ValidateIssuerSigningKey = true,
+                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII
+                    .GetBytes(Configuration.GetSection("AppSettings:Token").Value)),
+                  ValidateIssuer = false,
+                  ValidateAudience = false
+                };
+              });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -49,6 +65,7 @@ namespace DatingApp.API
             app.UseRouting();
             // Goes after routing and before auth & endpoint
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            app.UseAuthentication();
             // app.UseMvc();
 
             app.UseAuthorization();
